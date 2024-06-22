@@ -9,7 +9,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:gallery_saver/gallery_saver.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+
+import 'cropIMG/result_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -250,6 +254,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 //   )
 
                 : CustomImageCrop(
+                    backgroundColor: Colors.transparent,
                     cropController: controller,
                     image: FileImage(_image!),
                     shape: _currentShape,
@@ -264,11 +269,11 @@ class _MyHomePageState extends State<MyHomePage> {
                     customProgressIndicator: const CupertinoActivityIndicator(),
                     imageFit: _imageFit,
                     pathPaint: Paint()
-                      ..color = Colors.red
-                      ..strokeWidth = 4.0
-                      ..style = PaintingStyle.stroke
-                      ..strokeJoin = StrokeJoin.round,
-                  ),
+                      ..color = Colors.transparent
+                      // ..strokeWidth = 2.0
+                      ..style = PaintingStyle.fill
+                    // ..strokeJoin = StrokeJoin.round,
+                    ),
           ),
           if (_image != null)
             SingleChildScrollView(
@@ -418,56 +423,5 @@ extension CustomImageFitExtension on CustomImageFit {
       case CustomImageFit.fillVisibleWidth:
         return 'Fill visible width';
     }
-  }
-}
-
-class ResultScreen extends StatelessWidget {
-  const ResultScreen({super.key, required this.image});
-  final MemoryImage? image;
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Cropped Image'),
-      ),
-      body: Center(
-        child: image != null
-            ? Image.memory(image!.bytes)
-            : const Text('No image to display.'),
-      ),
-    );
-  }
-}
-
-class GlassEffectAppBar extends StatelessWidget {
-  const GlassEffectAppBar({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(kToolbarHeight),
-        child: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          flexibleSpace: ClipRect(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-              child: Container(
-                color: Colors.white.withOpacity(0.1),
-                child: const Center(
-                  child: Text(
-                    'Glass Effect AppBar',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-      body: const Center(child: Text('Content goes here')),
-    );
   }
 }
