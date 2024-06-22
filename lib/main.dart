@@ -1,4 +1,15 @@
+import 'dart:io';
+import 'dart:math';
+import 'dart:ui';
+
+import 'package:custom_image_crop/custom_image_crop.dart';
+import 'package:dotted_border/dotted_border.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
+import 'package:image_picker/image_picker.dart';
 
 void main() {
   runApp(const MyApp());
@@ -7,119 +18,456 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Custom crop example',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+        primarySwatch: Colors.blue,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'Custom crop example'),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
   final String title;
 
+  const MyHomePage({
+    required this.title,
+    super.key,
+  });
+
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  _MyHomePageState createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  late CustomImageCropController controller;
+  CustomCropShape _currentShape = CustomCropShape.Circle;
+  CustomImageFit _imageFit = CustomImageFit.fillCropSpace;
+  final TextEditingController _widthController = TextEditingController();
+  final TextEditingController _heightController = TextEditingController();
+  final TextEditingController _radiusController = TextEditingController();
 
-  void _incrementCounter() {
+  double _width = 16;
+  double _height = 9;
+  double _radius = 4;
+
+  File? _image;
+  final ImagePicker _picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    controller = CustomImageCropController();
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  void _changeCropShape(CustomCropShape newShape) {
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      _currentShape = newShape;
+    });
+  }
+
+  void _changeImageFit(CustomImageFit imageFit) {
+    setState(() {
+      _imageFit = imageFit;
+    });
+  }
+
+  void _updateRatio() {
+    setState(() {
+      if (_widthController.text.isNotEmpty) {
+        _width = double.tryParse(_widthController.text) ?? 16;
+      }
+      if (_heightController.text.isNotEmpty) {
+        _height = double.tryParse(_heightController.text) ?? 9;
+      }
+      if (_radiusController.text.isNotEmpty) {
+        _radius = double.tryParse(_radiusController.text) ?? 4;
+      }
+    });
+    FocusScope.of(context).unfocus();
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    final pickedFile = await _picker.pickImage(source: source);
+
+    if (pickedFile != null) {
+      setState(() {
+        _image = File(pickedFile.path);
+      });
+    } else {
+      print('No image selected.');
+    }
+  }
+
+  void _resetImage() {
+    setState(() {
+      _image = null;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+    var s = MediaQuery.of(context).size;
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
+      extendBodyBehindAppBar: true,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          flexibleSpace: ClipRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+              child: Container(
+                color: Colors.white.withOpacity(0.18),
+                child: const Center(
+                  child: Text(
+                    'FLUTTER IMAGE CROP',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ),
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+          ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      backgroundColor: Colors.purple.shade200,
+      body: Column(
+        children: [
+          Expanded(
+            child: _image == null
+                ? Center(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(
+                        sigmaX: 10,
+                        sigmaY: 15,
+                      ),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          // color: Colors.white.withOpacity(.6),
+                          borderRadius: BorderRadius.circular(6),
+                          gradient: const LinearGradient(
+                            colors: [
+                              Colors.white70,
+                              Colors.white24,
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomCenter,
+                          ),
+                        ),
+                        width: s.width * .8,
+                        height: s.height * .4,
+                        child: DottedBorder(
+                          color: Colors.black54,
+                          strokeWidth: 1.4,
+                          dashPattern: const [6, 4.5], // Pattern of the dashes
+                          borderType: BorderType.RRect,
+                          radius: const Radius.circular(6),
+                          child: SizedBox(
+                            width: s.width * .8,
+                            height: s.height * .4,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: 50,
+                                  height: 50,
+                                  padding: const EdgeInsets.all(3),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(.4),
+                                    borderRadius: BorderRadius.circular(12),
+                                    // border: Border.all(color: Colors.black),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(1.0),
+                                    child: Image.asset(
+                                        'assets/images/img-download.png'),
+                                  ),
+                                ),
+                                SizedBox(
+                                  height: s.height * .04,
+                                ),
+                                GestureDetector(
+                                  onTap: () => _pickImage(ImageSource.gallery),
+                                  child: Container(
+                                    width: double.infinity,
+                                    height: s.height * .072,
+                                    margin: EdgeInsets.only(
+                                        left: s.width * .098,
+                                        right: s.width * .098),
+                                    decoration: BoxDecoration(
+                                      color: Colors.indigo.shade800,
+                                      borderRadius: BorderRadius.circular(18),
+                                    ),
+                                    child: const Center(
+                                      child: Text(
+                                        "Upload image",
+                                        // textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 15.5,
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+
+                //  Center(
+                //     child: Row(
+                //       mainAxisAlignment: MainAxisAlignment.center,
+                //       children: [
+                //         FloatingActionButton(
+                //           onPressed: () => _pickImage(ImageSource.camera),
+                //           tooltip: 'Pick Image from Camera',
+                //           child: const Icon(Icons.add_a_photo),
+                //         ),
+                //         const SizedBox(width: 20),
+                //         FloatingActionButton(
+                //           onPressed: () => _pickImage(ImageSource.gallery),
+                //           tooltip: 'Pick Image from Gallery',
+                //           child: const Icon(Icons.photo_library),
+                //         ),
+                //       ],
+                //     ),
+                //   )
+
+                : CustomImageCrop(
+                    cropController: controller,
+                    image: FileImage(_image!),
+                    shape: _currentShape,
+                    ratio: _currentShape == CustomCropShape.Ratio
+                        ? Ratio(width: _width, height: _height)
+                        : null,
+                    canRotate: true,
+                    canMove: true,
+                    canScale: true,
+                    borderRadius:
+                        _currentShape == CustomCropShape.Ratio ? _radius : 0,
+                    customProgressIndicator: const CupertinoActivityIndicator(),
+                    imageFit: _imageFit,
+                    pathPaint: Paint()
+                      ..color = Colors.red
+                      ..strokeWidth = 4.0
+                      ..style = PaintingStyle.stroke
+                      ..strokeJoin = StrokeJoin.round,
+                  ),
+          ),
+          if (_image != null)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  IconButton(
+                      icon: const Icon(Icons.refresh),
+                      onPressed: controller.reset),
+                  IconButton(
+                      icon: const Icon(Icons.zoom_in),
+                      onPressed: () =>
+                          controller.addTransition(CropImageData(scale: 1.33))),
+                  IconButton(
+                      icon: const Icon(Icons.zoom_out),
+                      onPressed: () =>
+                          controller.addTransition(CropImageData(scale: 0.75))),
+                  IconButton(
+                      icon: const Icon(Icons.rotate_left),
+                      onPressed: () => controller
+                          .addTransition(CropImageData(angle: -pi / 4))),
+                  IconButton(
+                      icon: const Icon(Icons.rotate_right),
+                      onPressed: () => controller
+                          .addTransition(CropImageData(angle: pi / 4))),
+                  PopupMenuButton(
+                    icon: const Icon(Icons.crop_original),
+                    onSelected: _changeCropShape,
+                    itemBuilder: (BuildContext context) {
+                      return CustomCropShape.values.map(
+                        (shape) {
+                          return PopupMenuItem(
+                            value: shape,
+                            child: getShapeIcon(shape),
+                          );
+                        },
+                      ).toList();
+                    },
+                  ),
+                  PopupMenuButton(
+                    icon: const Icon(Icons.fit_screen),
+                    onSelected: _changeImageFit,
+                    itemBuilder: (BuildContext context) {
+                      return CustomImageFit.values.map(
+                        (imageFit) {
+                          return PopupMenuItem(
+                            value: imageFit,
+                            child: Text(imageFit.label),
+                          );
+                        },
+                      ).toList();
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.crop,
+                      color: Colors.green,
+                    ),
+                    onPressed: () async {
+                      final image = await controller.onCropImage();
+                      if (image != null) {
+                        Navigator.of(context).push(MaterialPageRoute(
+                            builder: (BuildContext context) =>
+                                ResultScreen(image: image)));
+                      }
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: _resetImage,
+                  ),
+                ],
+              ),
+            ),
+          if (_currentShape == CustomCropShape.Ratio) ...[
+            SizedBox(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _widthController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Width'),
+                    ),
+                  ),
+                  const SizedBox(width: 16.0),
+                  Expanded(
+                    child: TextField(
+                      controller: _heightController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Height'),
+                    ),
+                  ),
+                  const SizedBox(width: 16.0),
+                  Expanded(
+                    child: TextField(
+                      controller: _radiusController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Radius'),
+                    ),
+                  ),
+                  const SizedBox(width: 16.0),
+                  ElevatedButton(
+                    onPressed: _updateRatio,
+                    child: const Text('Update Ratio'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          SizedBox(height: MediaQuery.of(context).padding.bottom),
+        ],
+      ),
+    );
+  }
+
+  Widget getShapeIcon(CustomCropShape shape) {
+    switch (shape) {
+      case CustomCropShape.Circle:
+        return const Icon(Icons.circle_outlined);
+      case CustomCropShape.Square:
+        return const Icon(Icons.square_outlined);
+      case CustomCropShape.Ratio:
+        return const Icon(Icons.crop_16_9_outlined);
+    }
+  }
+}
+
+extension CustomImageFitExtension on CustomImageFit {
+  String get label {
+    switch (this) {
+      case CustomImageFit.fillCropSpace:
+        return 'Fill crop space';
+      case CustomImageFit.fitCropSpace:
+        return 'Fit crop space';
+      case CustomImageFit.fillCropHeight:
+        return 'Fill crop height';
+      case CustomImageFit.fillCropWidth:
+        return 'Fill crop width';
+      case CustomImageFit.fillVisibleSpace:
+        return 'Fill visible space';
+      case CustomImageFit.fitVisibleSpace:
+        return 'Fit visible space';
+      case CustomImageFit.fillVisibleHeight:
+        return 'Fill visible height';
+      case CustomImageFit.fillVisibleWidth:
+        return 'Fill visible width';
+    }
+  }
+}
+
+class ResultScreen extends StatelessWidget {
+  const ResultScreen({super.key, required this.image});
+  final MemoryImage? image;
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Cropped Image'),
+      ),
+      body: Center(
+        child: image != null
+            ? Image.memory(image!.bytes)
+            : const Text('No image to display.'),
+      ),
+    );
+  }
+}
+
+class GlassEffectAppBar extends StatelessWidget {
+  const GlassEffectAppBar({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          flexibleSpace: ClipRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+              child: Container(
+                color: Colors.white.withOpacity(0.1),
+                child: const Center(
+                  child: Text(
+                    'Glass Effect AppBar',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+      body: const Center(child: Text('Content goes here')),
     );
   }
 }
