@@ -12,7 +12,9 @@ import 'package:flutter/widgets.dart';
 import 'package:gallery_saver/gallery_saver.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:profile_image_crop/utils/extensions.dart';
 
+import 'cropIMG/image_croper.dart';
 import 'cropIMG/result_screen.dart';
 
 void main() {
@@ -147,8 +149,11 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       backgroundColor: Colors.purple.shade200,
       body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Expanded(
+            // width: double.infinity,
+            // height: s.height * .5,
             child: _image == null
                 ? Center(
                     child: BackdropFilter(
@@ -233,120 +238,95 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                     ),
                   )
-
-                //  Center(
-                //     child: Row(
-                //       mainAxisAlignment: MainAxisAlignment.center,
-                //       children: [
-                //         FloatingActionButton(
-                //           onPressed: () => _pickImage(ImageSource.camera),
-                //           tooltip: 'Pick Image from Camera',
-                //           child: const Icon(Icons.add_a_photo),
-                //         ),
-                //         const SizedBox(width: 20),
-                //         FloatingActionButton(
-                //           onPressed: () => _pickImage(ImageSource.gallery),
-                //           tooltip: 'Pick Image from Gallery',
-                //           child: const Icon(Icons.photo_library),
-                //         ),
-                //       ],
-                //     ),
-                //   )
-
-                : CustomImageCrop(
-                    backgroundColor: Colors.transparent,
-                    cropController: controller,
-                    image: FileImage(_image!),
-                    shape: _currentShape,
-                    ratio: _currentShape == CustomCropShape.Ratio
-                        ? Ratio(width: _width, height: _height)
-                        : null,
-                    canRotate: true,
-                    canMove: true,
-                    canScale: true,
-                    borderRadius:
-                        _currentShape == CustomCropShape.Ratio ? _radius : 0,
-                    customProgressIndicator: const CupertinoActivityIndicator(),
-                    imageFit: _imageFit,
-                    pathPaint: Paint()
-                      ..color = Colors.transparent
-                      // ..strokeWidth = 2.0
-                      ..style = PaintingStyle.fill
-                    // ..strokeJoin = StrokeJoin.round,
-                    ),
+                : ImageCroper(
+                    controller: controller,
+                    image: _image,
+                    currentShape: _currentShape,
+                    width: _width,
+                    height: _height,
+                    radius: _radius,
+                    imageFit: _imageFit),
           ),
           if (_image != null)
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  IconButton(
-                      icon: const Icon(Icons.refresh),
-                      onPressed: controller.reset),
-                  IconButton(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(
+                    sigmaX: 10, sigmaY: 10, tileMode: TileMode.clamp),
+                child: Row(
+                  // mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    IconButton(
+                        icon: const Icon(Icons.refresh),
+                        onPressed: controller.reset),
+                    IconButton(
                       icon: const Icon(Icons.zoom_in),
-                      onPressed: () =>
-                          controller.addTransition(CropImageData(scale: 1.33))),
-                  IconButton(
-                      icon: const Icon(Icons.zoom_out),
-                      onPressed: () =>
-                          controller.addTransition(CropImageData(scale: 0.75))),
-                  IconButton(
-                      icon: const Icon(Icons.rotate_left),
-                      onPressed: () => controller
-                          .addTransition(CropImageData(angle: -pi / 4))),
-                  IconButton(
-                      icon: const Icon(Icons.rotate_right),
-                      onPressed: () => controller
-                          .addTransition(CropImageData(angle: pi / 4))),
-                  PopupMenuButton(
-                    icon: const Icon(Icons.crop_original),
-                    onSelected: _changeCropShape,
-                    itemBuilder: (BuildContext context) {
-                      return CustomCropShape.values.map(
-                        (shape) {
-                          return PopupMenuItem(
-                            value: shape,
-                            child: getShapeIcon(shape),
-                          );
-                        },
-                      ).toList();
-                    },
-                  ),
-                  PopupMenuButton(
-                    icon: const Icon(Icons.fit_screen),
-                    onSelected: _changeImageFit,
-                    itemBuilder: (BuildContext context) {
-                      return CustomImageFit.values.map(
-                        (imageFit) {
-                          return PopupMenuItem(
-                            value: imageFit,
-                            child: Text(imageFit.label),
-                          );
-                        },
-                      ).toList();
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.crop,
-                      color: Colors.green,
+                      onPressed: () {
+                        controller.addTransition(
+                          CropImageData(scale: 1.33),
+                        );
+                      },
                     ),
-                    onPressed: () async {
-                      final image = await controller.onCropImage();
-                      if (image != null) {
-                        Navigator.of(context).push(MaterialPageRoute(
-                            builder: (BuildContext context) =>
-                                ResultScreen(image: image)));
-                      }
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: _resetImage,
-                  ),
-                ],
+                    IconButton(
+                        icon: const Icon(Icons.zoom_out),
+                        onPressed: () => controller
+                            .addTransition(CropImageData(scale: 0.75))),
+                    IconButton(
+                        icon: const Icon(Icons.rotate_left),
+                        onPressed: () => controller
+                            .addTransition(CropImageData(angle: -pi / 4))),
+                    IconButton(
+                        icon: const Icon(Icons.rotate_right),
+                        onPressed: () => controller
+                            .addTransition(CropImageData(angle: pi / 4))),
+                    PopupMenuButton(
+                      icon: const Icon(Icons.crop_original),
+                      onSelected: _changeCropShape,
+                      itemBuilder: (BuildContext context) {
+                        return CustomCropShape.values.map(
+                          (shape) {
+                            return PopupMenuItem(
+                              value: shape,
+                              child: getShapeIcon(shape),
+                            );
+                          },
+                        ).toList();
+                      },
+                    ),
+                    PopupMenuButton(
+                      icon: const Icon(Icons.fit_screen),
+                      onSelected: _changeImageFit,
+                      itemBuilder: (BuildContext context) {
+                        return CustomImageFit.values.map(
+                          (imageFit) {
+                            return PopupMenuItem(
+                              value: imageFit,
+                              child: Text(imageFit.label),
+                            );
+                          },
+                        ).toList();
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.crop,
+                        color: Colors.green,
+                      ),
+                      onPressed: () async {
+                        final image = await controller.onCropImage();
+                        if (image != null) {
+                          Navigator.of(context).push(MaterialPageRoute(
+                              builder: (BuildContext context) =>
+                                  ResultScreen(image: image)));
+                        }
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: _resetImage,
+                    ),
+                  ],
+                ),
               ),
             ),
           if (_currentShape == CustomCropShape.Ratio) ...[
@@ -399,29 +379,6 @@ class _MyHomePageState extends State<MyHomePage> {
         return const Icon(Icons.square_outlined);
       case CustomCropShape.Ratio:
         return const Icon(Icons.crop_16_9_outlined);
-    }
-  }
-}
-
-extension CustomImageFitExtension on CustomImageFit {
-  String get label {
-    switch (this) {
-      case CustomImageFit.fillCropSpace:
-        return 'Fill crop space';
-      case CustomImageFit.fitCropSpace:
-        return 'Fit crop space';
-      case CustomImageFit.fillCropHeight:
-        return 'Fill crop height';
-      case CustomImageFit.fillCropWidth:
-        return 'Fill crop width';
-      case CustomImageFit.fillVisibleSpace:
-        return 'Fill visible space';
-      case CustomImageFit.fitVisibleSpace:
-        return 'Fit visible space';
-      case CustomImageFit.fillVisibleHeight:
-        return 'Fill visible height';
-      case CustomImageFit.fillVisibleWidth:
-        return 'Fill visible width';
     }
   }
 }
